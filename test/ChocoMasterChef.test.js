@@ -60,7 +60,7 @@ contract("ChocoMasterChef", () => {
     });
 
     chocoToken = await ChocoToken.new({ from: ADMIN });
-    
+
     chocoChef = await ChocoMasterChef.new({ from: ADMIN });
     await chocoChef.initialize(
       chocoToken.address,
@@ -68,7 +68,7 @@ contract("ChocoMasterChef", () => {
       Number(await time.latestBlock()),
       { from: ADMIN }
     );
-    
+
     await chocoToken.transferOwnership(chocoChef.address, { from: ADMIN });
 
     await chocoChef.add(1200, DAI_ADDRESS, LP_DAI, { from: ADMIN });
@@ -115,14 +115,18 @@ contract("ChocoMasterChef", () => {
 
     const daiLPToken = await IERC20.at(LP_DAI);
     const balancePlayer1 = await daiLPToken.balanceOf(PLAYER1);
-    await daiLPToken.approve(chocoChef.address, balancePlayer1, { from: PLAYER1 });
+    await daiLPToken.approve(chocoChef.address, balancePlayer1, {
+      from: PLAYER1,
+    });
 
     const balancePlayer1Before = await daiLPToken.balanceOf(PLAYER1);
     console.log(
       "\tPLAYER1 LP Tokens \t\t(Before) :>> ",
       (Number(balancePlayer1Before) / 10 ** 18).toFixed(18)
     );
-    const balanceChocoChefBefore = await daiLPToken.balanceOf(chocoChef.address);
+    const balanceChocoChefBefore = await daiLPToken.balanceOf(
+      chocoChef.address
+    );
     console.log(
       "\tChocoMasterChef LP Tokens \t(Before) :>> ",
       (Number(balanceChocoChefBefore) / 10 ** 18).toFixed(18)
@@ -131,7 +135,9 @@ contract("ChocoMasterChef", () => {
     const tx = await chocoChef.prepareChoco(
       DAI_ADDRESS,
       balancePlayer1,
-      { from: PLAYER1 }
+      {
+        from: PLAYER1,
+      }
     );
 
     const balancePlayer1After = await daiLPToken.balanceOf(PLAYER1);
@@ -147,9 +153,58 @@ contract("ChocoMasterChef", () => {
 
     await expectEvent(tx, "ChocoPrepared", {
       user: PLAYER1,
-      lpToken: LP_DAI,
+      token: DAI_ADDRESS,
       amount: balancePlayer1,
     });
+
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
+  it("another player should add liquidity and stake his LP tokens in one transaction", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    const daiToken = await IERC20.at(DAI_ADDRESS);
+    await daiToken.transfer(PLAYER2, toWei(1500), { from: PLAYER3 });
+    await daiToken.approve(chocoChef.address, toWei(1500), { from: PLAYER2 });
+
+    const daiLPToken = await IERC20.at(LP_DAI);
+
+    const balanceChocoChefBefore = await daiLPToken.balanceOf(
+      chocoChef.address
+    );
+    console.log(
+      "\tChocoMasterChef LP Tokens \t(Before) :>> ",
+      (Number(balanceChocoChefBefore) / 10 ** 18).toFixed(18)
+    );
+
+    const tx = await chocoChef.addIngredientsAndPrepareChoco(
+      DAI_ADDRESS,
+      toWei(1500),
+      timestamp + 1,
+      { from: PLAYER2, value: toWei(1) }
+    );
+
+    const balanceChocoChefAfter = await daiLPToken.balanceOf(chocoChef.address);
+    console.log(
+      "\tChocoMasterChef LP Tokens \t(After) :>> ",
+      (Number(balanceChocoChefAfter) / 10 ** 18).toFixed(18)
+    );
+
+    await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER2,
+      amountETH: toWei(1),
+      amountDAI: toWei(1500),
+    });
+
+    /* await expectEvent(tx, "ChocoPrepared", {
+      user: PLAYER2,
+      token: DAI_ADDRESS,
+      amount: balancePlayer2,
+    }); */
 
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
@@ -161,7 +216,9 @@ contract("ChocoMasterChef", () => {
 
     const daiLPToken = await IERC20.at(LP_DAI);
     const balancePlayer1 = await daiLPToken.balanceOf(PLAYER1);
-    await daiLPToken.approve(chocoChef.address, balancePlayer1, { from: PLAYER1 });
+    await daiLPToken.approve(chocoChef.address, balancePlayer1, {
+      from: PLAYER1,
+    });
 
     const balancePlayer1Before = await chocoToken.balanceOf(PLAYER1);
     console.log(
@@ -169,10 +226,7 @@ contract("ChocoMasterChef", () => {
       (Number(balancePlayer1Before) / 10 ** 18).toFixed(18)
     );
 
-    const tx = await chocoChef.claimChoco(
-      DAI_ADDRESS,
-      { from: PLAYER1 }
-    );
+    const tx = await chocoChef.claimChoco(DAI_ADDRESS, { from: PLAYER1 });
 
     const balancePlayer1After = await chocoToken.balanceOf(PLAYER1);
     console.log(
