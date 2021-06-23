@@ -47,7 +47,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     IUniswapV2Router public router;
 
     event IngredientsAdded(address user, uint256 amountETH, uint256 amountDAI);
-    event ChocoPrepared(address user, address lpToken, uint256 amount);
+    event ChocoPrepared(address user, address token, uint256 amount);
 
     function initialize(
         address _chocoToken,
@@ -86,12 +86,21 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         });
     }
 
-    // add liquidity
     function addIngredients(
         address token,
         uint256 amount,
         uint256 preparationDeadline
     ) external payable {
+        _addIngredients(token, amount, msg.sender, preparationDeadline);
+    }
+
+    // add liquidity
+    function _addIngredients(
+        address token,
+        uint256 amount,
+        address to,
+        uint256 preparationDeadline
+    ) internal returns (uint256) {
         require(token != address(0), "ChocoMasterChef: No ingredients");
         uint256 poolIndex = poolInfoIndex[token];
         require(
@@ -110,40 +119,61 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         IERC20(token).safeApprove(address(router), amount);
 
-        (uint256 amountToken, uint256 amountETH, uint256 liquidity) = router
-        .addLiquidityETH{value: msg.value}(
-            token,
-            amount,
-            1,
-            1,
-            msg.sender,
-            preparationDeadline
-        );
+        (, uint256 amountETH, uint256 liquidity) = router.addLiquidityETH{
+            value: msg.value
+        }(token, amount, 1, 1, to, preparationDeadline);
 
         // refunds leftover ETH to the sender
         msg.sender.transfer(msg.value - amountETH);
 
         emit IngredientsAdded(msg.sender, msg.value, amount);
+
+        return liquidity;
+    }
+
+    function prepareChoco(address token, uint256 amount) external {
+        _prepareChoco(token, amount, msg.sender);
     }
 
     // stake
-    function prepareChoco(address _token, uint256 _amount) external {
-        uint256 _pid = poolInfoIndex[_token];
+    function _prepareChoco(
+        address token,
+        uint256 amount,
+        address from
+    ) internal {
+        uint256 _pid = poolInfoIndex[token];
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-        pool.lpToken.safeTransferFrom(msg.sender, address(this), _amount);
-        user.amount = user.amount.add(_amount);
+        if (from != address(this)) {
+            pool.lpToken.safeTransferFrom(msg.sender, address(this), amount);
+        }
+        user.amount = user.amount.add(amount);
         user.rewardDebt = user.amount.mul(pool.accChocoPerShare).div(1e12);
-        emit ChocoPrepared(msg.sender, address(pool.lpToken), _amount);
+        emit ChocoPrepared(msg.sender, token, amount);
     }
 
     function prepareChocoWithPermit() external {}
 
-    function addIngredientsAndPrepareChoco() external {}
+    function addIngredientsAndPrepareChoco(
+        address token,
+        uint256 amount,
+        uint256 preparationDeadline
+    ) external payable {
+        uint256 liquidity = _addIngredients(
+            token,
+            amount,
+            address(this),
+            preparationDeadline
+        );
+        _prepareChoco(token, liquidity, address(this));
 
-    function claimChoco(address _token) external {
-        uint256 _pid = poolInfoIndex[_token];
+        emit IngredientsAdded(msg.sender, msg.value, amount);
+        emit ChocoPrepared(msg.sender, token, liquidity);
+    }
+
+    function claimChoco(address token) external {
+        uint256 _pid = poolInfoIndex[token];
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
@@ -157,15 +187,15 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         // emit ChocoClaimed(msg.sender, _pid, reward);
     }
 
-    function getMultiplier(uint256 _from, uint256 _to)
+    function getMultiplier(uint256 from, uint256 to)
         public
-        view
+        pure
         returns (uint256)
     {
         return
-            _to > _from
-                ? _to.sub(_from).mul(BONUS_MULTIPLIER)
-                : _from.add(1).sub(_to).mul(BONUS_MULTIPLIER);
+            to > from
+                ? to.sub(from).mul(BONUS_MULTIPLIER)
+                : from.add(1).sub(to).mul(BONUS_MULTIPLIER);
     }
 
     function updatePool(uint256 _pid) public {
