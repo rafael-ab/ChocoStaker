@@ -49,6 +49,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     event ChocoPotAdded(uint256 index, address token, uint256 allocationPoint);
     event IngredientsAdded(address user, uint256 amountETH, uint256 amountDAI);
     event ChocoPrepared(address user, address token, uint256 amount);
+    event ChocoClaimed(address user, address poolIndex, uint256 reward);
 
     function initialize(
         address _chocoToken,
@@ -187,7 +188,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
-        // emit ChocoClaimed(msg.sender, _pid, reward);
+        emit ChocoClaimed(msg.sender, _pid, reward);
     }
 
     function getMultiplier(uint256 from, uint256 to)
