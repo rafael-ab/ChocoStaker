@@ -3,7 +3,7 @@ pragma solidity ^0.7.6;
 
 interface IUniswapV2ERC20 {
     function name() external pure returns (string memory);
-    
+
     function decimals() external pure returns (uint8);
 
     function balanceOf(address owner) external view returns (uint256);
