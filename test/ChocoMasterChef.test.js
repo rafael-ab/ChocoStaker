@@ -12,9 +12,7 @@ const {
 } = require("@openzeppelin/test-helpers");
 
 // message signer tools
-const { getApprovalDigest } = require("./utils/signerUtils");
-const { ecsign } = require("ethereumjs-util");
-const { hexlify } = require("ethers-utils");
+const { signTokenPermit } = require("./utils/signerUtils");
 
 // Token Address
 const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
@@ -54,30 +52,6 @@ const toWei = (value, type) => web3.utils.toWei(String(value), type);
 const fromWei = (value, type) =>
   Number(web3.utils.fromWei(String(value), type));
 const toBN = (value) => web3.utils.toBN(String(value));
-const signTokenPermit = async (token, sender, senderPk, spender, value) => {
-  const nonce = await token.nonces(sender);
-  const deadline = (await time.latest()) + 1;
-  const digest = await getApprovalDigest(
-    token,
-    sender,
-    spender,
-    value,
-    nonce,
-    deadline
-  );
-
-  const { v, r, s } = ecsign(
-    Buffer.from(digest.slice(2), "hex"),
-    Buffer.from(senderPk.slice(2), "hex")
-  );
-
-  return {
-    deadline,
-    v,
-    r: hexlify(r),
-    s: hexlify(s),
-  };
-};
 
 contract("ChocoMasterChef", () => {
   let chocoChef, chocoToken;
