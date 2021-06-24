@@ -46,6 +46,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
 
     IUniswapV2Router public router;
 
+    event ChocoPotAdded(uint256 index, address token, uint256 allocationPoint);
     event IngredientsAdded(address user, uint256 amountETH, uint256 amountDAI);
     event ChocoPrepared(address user, address token, uint256 amount);
 
@@ -63,11 +64,11 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         router = IUniswapV2Router(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     }
 
-    function add(
+    function addChocoPot(
         uint256 _allocPoint,
         address _token,
         address _lpToken
-    ) public onlyOwner {
+    ) external onlyOwner {
         require(
             poolInfoIndex[_token] == 0,
             "ChocoMasterChef: Oups! There's enough of this ingredient"
@@ -84,6 +85,8 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             lastRewardBlock: lastRewardBlock,
             accChocoPerShare: 0
         });
+
+        emit ChocoPotAdded(poolInfoCount - 1, _token, allocPoint);
     }
 
     function addIngredients(

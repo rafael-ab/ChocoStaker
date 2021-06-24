@@ -118,12 +118,12 @@ contract("ChocoMasterChef", () => {
     // transfer ownership to ChocoMasterChef to reward users
     await chocoToken.transferOwnership(chocoChef.address, { from: ADMIN });
 
-    await chocoChef.add(1200, DAI_ADDRESS, LP_DAI, { from: ADMIN });
-    await chocoChef.add(300, USDC_ADDRESS, LP_USDC, { from: ADMIN });
-    await chocoChef.add(100, BAT_ADDRESS, LP_BAT, { from: ADMIN });
-    await chocoChef.add(250, LINK_ADDRESS, LP_LINK, { from: ADMIN });
-    await chocoChef.add(800, USDT_ADDRESS, LP_USDT, { from: ADMIN });
-    await chocoChef.add(400, TUSD_ADDRESS, LP_TUSD, { from: ADMIN });
+    await chocoChef.addChocoPot(1200, DAI_ADDRESS, LP_DAI, { from: ADMIN });
+    await chocoChef.addChocoPot(300, USDC_ADDRESS, LP_USDC, { from: ADMIN });
+    await chocoChef.addChocoPot(100, BAT_ADDRESS, LP_BAT, { from: ADMIN });
+    await chocoChef.addChocoPot(250, LINK_ADDRESS, LP_LINK, { from: ADMIN });
+    await chocoChef.addChocoPot(800, USDT_ADDRESS, LP_USDT, { from: ADMIN });
+    await chocoChef.addChocoPot(400, TUSD_ADDRESS, LP_TUSD, { from: ADMIN });
   });
 
   it("player1 and player2 should add liquidity", async () => {
