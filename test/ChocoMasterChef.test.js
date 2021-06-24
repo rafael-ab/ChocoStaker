@@ -3,12 +3,18 @@ const ChocoToken = artifacts.require("ChocoToken");
 const IERC20 = artifacts.require(
   "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20"
 );
-const { assert, web3 } = require("hardhat");
+const IUniV2ERC20 = artifacts.require("IUniswapV2ERC20");
+const { assert, web3, network } = require("hardhat");
 const {
   expectEvent,
   expectRevert,
   time,
 } = require("@openzeppelin/test-helpers");
+
+// message signer tools
+const { getApprovalDigest } = require("./utils/signerUtils");
+const { ecsign } = require("ethereumjs-util");
+const { hexlify } = require("ethers-utils");
 
 // Token Address
 const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
@@ -21,13 +27,18 @@ const BUSD_ADDRESS = "0x4Fabb145d64652a948d72533023f6E7A623C7C53";
 
 // Account Address
 const ADMIN = "0xbe6977e08d4479c0a6777539ae0e8fa27be4e9d6";
-const PLAYER1 = "0x73BCEb1Cd57C711feaC4224D062b0F6ff338501e"; // Account with ETH
-const PLAYER2 = "0x0a4c79cE84202b03e95B7a692E5D728d83C44c76"; // Account with ETH
-const PLAYER3 = "0xC2C5A77d9f434F424Df3d39de9e90d95A0Df5Aca"; // Account with DAI
-const PLAYER4 = "0xB78e90E2eC737a2C0A24d68a0e54B410FFF3bD6B"; // Account with USDT
-const PLAYER5 = "0x62Fe3E658139E1b38b8BAE6013C26E5465A2A743"; // Account with USDT and USDC
-const PLAYER6 = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503"; // Account with BUSD
-const PLAYER7 = "0xDf81D9546D18EC066253dd097A9bcc4ab738A792"; // Account with TUSD
+const PLAYER1 = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"; // Hardhat Account 0
+const PLAYER1_PK =
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const PLAYER2 = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"; // Hardhat Account 1
+const PLAYER2_PK =
+  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+const PLAYER3 = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"; // Hardhat Account 2
+const PLAYER3_PK =
+  "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a";
+const PLAYER_WITH_DAI = "0xC2C5A77d9f434F424Df3d39de9e90d95A0Df5Aca"; // Account with DAI
+const PLAYER_WITH_USDT = "0xB78e90E2eC737a2C0A24d68a0e54B410FFF3bD6B"; // Account with USDT
+const PLAYER_WITH_USDC = "0x62Fe3E658139E1b38b8BAE6013C26E5465A2A743"; // Account with USDT and USDC
 
 // Uniswap ETH/Token LP Tokens
 const LP_DAI = "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11";
@@ -37,6 +48,30 @@ const toWei = (value, type) => web3.utils.toWei(String(value), type);
 const fromWei = (value, type) =>
   Number(web3.utils.fromWei(String(value), type));
 const toBN = (value) => web3.utils.toBN(String(value));
+const signTokenPermit = async (token, sender, senderPk, spender, value) => {
+  const nonce = await token.nonces(sender);
+  const deadline = (await time.latest()) + 1;
+  const digest = await getApprovalDigest(
+    token,
+    sender,
+    spender,
+    value,
+    nonce,
+    deadline
+  );
+
+  const { v, r, s } = ecsign(
+    Buffer.from(digest.slice(2), "hex"),
+    Buffer.from(senderPk.slice(2), "hex")
+  );
+
+  return {
+    deadline,
+    v,
+    r: hexlify(r),
+    s: hexlify(s),
+  };
+};
 
 contract("ChocoMasterChef", () => {
   let chocoChef, chocoToken;
@@ -48,16 +83,21 @@ contract("ChocoMasterChef", () => {
     });
     await hre.network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: [PLAYER1],
+      params: [PLAYER_WITH_DAI],
     });
     await hre.network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: [PLAYER2],
+      params: [PLAYER_WITH_USDT],
     });
     await hre.network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: [PLAYER3],
+      params: [PLAYER_WITH_USDC],
     });
+
+    const daiToken = await IERC20.at(DAI_ADDRESS);
+    await daiToken.transfer(PLAYER1, toWei(5000), { from: PLAYER_WITH_DAI });
+    await daiToken.transfer(PLAYER2, toWei(5000), { from: PLAYER_WITH_DAI });
+    await daiToken.transfer(PLAYER3, toWei(5000), { from: PLAYER_WITH_DAI });
 
     chocoToken = await ChocoToken.new({ from: ADMIN });
 
@@ -82,8 +122,9 @@ contract("ChocoMasterChef", () => {
     const timestamp = await time.latest();
 
     const daiToken = await IERC20.at(DAI_ADDRESS);
-    await daiToken.transfer(PLAYER1, toWei(500), { from: PLAYER3 });
-    await daiToken.approve(chocoChef.address, toWei(500), { from: PLAYER1 });
+    await daiToken.approve(chocoChef.address, toWei(500), {
+      from: PLAYER1,
+    });
 
     const tx = await chocoChef.addIngredients(
       DAI_ADDRESS,
@@ -113,11 +154,27 @@ contract("ChocoMasterChef", () => {
       "    ------------------------------------------------------------------"
     );
 
-    const daiLPToken = await IERC20.at(LP_DAI);
+    const daiLPToken = await IUniV2ERC20.at(LP_DAI);
     const balancePlayer1 = await daiLPToken.balanceOf(PLAYER1);
-    await daiLPToken.approve(chocoChef.address, balancePlayer1, {
-      from: PLAYER1,
-    });
+
+    // signing data
+    const result = await signTokenPermit(
+      daiLPToken,
+      PLAYER1,
+      PLAYER1_PK,
+      chocoChef.address,
+      balancePlayer1
+    );
+
+    await daiLPToken.permit(
+      PLAYER1,
+      chocoChef.address,
+      balancePlayer1,
+      result.deadline,
+      result.v,
+      result.r,
+      result.s
+    );
 
     const balancePlayer1Before = await daiLPToken.balanceOf(PLAYER1);
     console.log(
@@ -132,13 +189,9 @@ contract("ChocoMasterChef", () => {
       (Number(balanceChocoChefBefore) / 10 ** 18).toFixed(18)
     );
 
-    const tx = await chocoChef.prepareChoco(
-      DAI_ADDRESS,
-      balancePlayer1,
-      {
-        from: PLAYER1,
-      }
-    );
+    const tx = await chocoChef.prepareChoco(DAI_ADDRESS, balancePlayer1, {
+      from: PLAYER1,
+    });
 
     const balancePlayer1After = await daiLPToken.balanceOf(PLAYER1);
     console.log(
@@ -168,7 +221,6 @@ contract("ChocoMasterChef", () => {
     const timestamp = await time.latest();
 
     const daiToken = await IERC20.at(DAI_ADDRESS);
-    await daiToken.transfer(PLAYER2, toWei(1500), { from: PLAYER3 });
     await daiToken.approve(chocoChef.address, toWei(1500), { from: PLAYER2 });
 
     const daiLPToken = await IERC20.at(LP_DAI);
@@ -216,9 +268,6 @@ contract("ChocoMasterChef", () => {
 
     const daiLPToken = await IERC20.at(LP_DAI);
     const balancePlayer1 = await daiLPToken.balanceOf(PLAYER1);
-    await daiLPToken.approve(chocoChef.address, balancePlayer1, {
-      from: PLAYER1,
-    });
 
     const balancePlayer1Before = await chocoToken.balanceOf(PLAYER1);
     console.log(
