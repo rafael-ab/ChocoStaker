@@ -49,7 +49,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     event ChocoPotAdded(uint256 index, address token, uint256 allocationPoint);
     event IngredientsAdded(address user, uint256 amountETH, uint256 amountDAI);
     event ChocoPrepared(address user, address token, uint256 amount);
-    event ChocoClaimed(address user, address poolIndex, uint256 reward);
+    event ChocoClaimed(address user, uint256 poolIndex, uint256 reward);
 
     function initialize(
         address _chocoToken,
@@ -87,7 +87,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             accChocoPerShare: 0
         });
 
-        emit ChocoPotAdded(poolInfoCount - 1, _token, allocPoint);
+        emit ChocoPotAdded(poolInfoCount - 1, _token, _allocPoint);
     }
 
     function addIngredients(
