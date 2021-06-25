@@ -104,7 +104,11 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             _token0 != _token1,
             "ChocoMasterChef: You need more ingredients to mix, no just one"
         );
-        require(_amount > 0, "ChocoMasterChef: No enough ingredients to mix");
+        require(
+            _amount > 0 &&
+                IERC20(_token0).allowance(msg.sender, address(this)) >= _amount,
+            "ChocoMasterChef: No enough ingredients to mix"
+        );
 
         IWETH weth = IWETH(router.WETH());
 
