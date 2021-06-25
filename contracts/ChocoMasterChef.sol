@@ -6,15 +6,18 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {SafeMathUpgradeable} from "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import {ChocoToken} from "./ChocoToken.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
+import {IWETH} from "./interfaces/IWETH.sol";
 import {SafeERC20} from "./libraries/SafeERC20.sol";
 import {IUniswapV2Router} from "./interfaces/UniswapV2/IUniswapV2Router.sol";
 import {IUniswapV2Factory} from "./interfaces/UniswapV2/IUniswapV2Factory.sol";
+import {IUniswapV2Pair} from "./interfaces/UniswapV2/IUniswapV2Pair.sol";
 
 import "hardhat/console.sol";
 
 contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH;
 
     struct UserInfo {
         uint256 amount;
@@ -88,6 +91,58 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         });
 
         emit ChocoPotAdded(poolInfoCount - 1, _token, _allocPoint);
+    }
+
+    function _swap(
+        address _pool,
+        address _token0,
+        address _token1,
+        uint256 _amount
+    ) internal returns (uint256) {
+        require(_pool != address(0), "ChocoMasterChef: No ChocoPot to mix");
+        require(
+            _token0 != _token1,
+            "ChocoMasterChef: You need more ingredients to mix, no just one"
+        );
+        require(_amount > 0, "ChocoMasterChef: No enough ingredients to mix");
+
+        IWETH weth = IWETH(router.WETH());
+
+        if (_token0 == address(weth)) {
+            weth.deposit{value: _amount}();
+        } else {
+            IERC20(_token0).safeTransferFrom(
+                msg.sender,
+                address(this),
+                _amount
+            );
+        }
+
+        IUniswapV2Pair pair = IUniswapV2Pair(_pool);
+        (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
+
+        IERC20 token0 = address(weth) == _token0
+            ? IERC20(address(weth))
+            : IERC20(_token0);
+
+        uint256 amountOutWithSlippage;
+        if (_token0 == pair.token0()) {
+            token0.safeTransfer(address(pair), _amount);
+            uint256 amountOut = _amount.mul(reserve1) / reserve0;
+            amountOutWithSlippage = amountOut.mul(996).div(1000);
+            pair.swap(0, amountOutWithSlippage, address(this), "");
+        } else {
+            token0.safeTransfer(address(pair), _amount);
+            uint256 amountOut = _amount.mul(reserve0) / reserve1;
+            amountOutWithSlippage = amountOut.mul(996).div(1000);
+            pair.swap(amountOutWithSlippage, 0, address(this), "");
+        }
+
+        if (_token1 == address(weth)) {
+            weth.withdraw(weth.balanceOf(address(this)));
+        }
+
+        return amountOutWithSlippage;
     }
 
     function addIngredients(
