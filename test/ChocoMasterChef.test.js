@@ -139,6 +139,79 @@ contract("ChocoMasterChef", () => {
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
 
+  it("player1 should add liquidity to DAI/ETH LP Token only with DAI", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    const daiToken = await IERC20.at(DAI_ADDRESS);
+    await daiToken.approve(chocoChef.address, toWei(2500), {
+      from: PLAYER1,
+    });
+
+    const tx = await chocoChef.addIngredients(
+      LP_DAI_ETH,
+      WETH_ADDRESS,
+      DAI_ADDRESS,
+      0,
+      toWei(2500),
+      timestamp + 1,
+      { from: PLAYER1, value: 0 }
+    );
+
+    /* await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER1,
+      tokenA: WETH_ADDRESS,
+      tokenB: DAI_ADDRESS,
+      amountA: toWei(2),
+      amountB: toWei(2500),
+    }); */
+
+    const daiETHLPToken = await IERC20.at(LP_DAI_ETH);
+    const balancePlayer1 = await daiETHLPToken.balanceOf(PLAYER1);
+    console.log(
+      "\tPLAYER1 LP Tokens :>> ",
+      (Number(balancePlayer1) / 10 ** 18).toFixed(18)
+    );
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
+  it("player1 should add liquidity to DAI/ETH LP Token only with ETH", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    const tx = await chocoChef.addIngredients(
+      LP_DAI_ETH,
+      WETH_ADDRESS,
+      DAI_ADDRESS,
+      toWei(1),
+      0,
+      timestamp + 1,
+      { from: PLAYER1, value: toWei(1) }
+    );
+
+    /* await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER1,
+      tokenA: WETH_ADDRESS,
+      tokenB: DAI_ADDRESS,
+      amountA: toWei(2),
+      amountB: toWei(2500),
+    }); */
+
+    const daiETHLPToken = await IERC20.at(LP_DAI_ETH);
+    const balancePlayer1 = await daiETHLPToken.balanceOf(PLAYER1);
+    console.log(
+      "\tPLAYER1 LP Tokens :>> ",
+      (Number(balancePlayer1) / 10 ** 18).toFixed(18)
+    );
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
   it("player2 should add liquidity to DAI/ETH LP Token", async () => {
     console.log(
       "    ------------------------------------------------------------------"

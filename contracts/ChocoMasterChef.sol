@@ -49,7 +49,11 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
 
     IUniswapV2Router public router;
 
-    event ChocoPotAdded(uint256 index, address lpToken, uint256 allocationPoint);
+    event ChocoPotAdded(
+        uint256 index,
+        address lpToken,
+        uint256 allocationPoint
+    );
     event IngredientsAdded(
         address user,
         address tokenA,
@@ -111,8 +115,8 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             "ChocoMasterChef: You need more ingredients to mix, no just one"
         );
         require(
-            _amount > 0 &&
-                IERC20(_token0).allowance(msg.sender, address(this)) >= _amount,
+            _amount > 0, /* &&
+                IERC20(_token0).allowance(msg.sender, address(this)) >= _amount */
             "ChocoMasterChef: No enough ingredients to mix"
         );
 
@@ -148,9 +152,9 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             pair.swap(amountOutWithSlippage, 0, address(this), "");
         }
 
-        if (_token1 == address(weth)) {
+        /* if (_token1 == address(weth)) {
             weth.withdraw(weth.balanceOf(address(this)));
-        }
+        } */
 
         return amountOutWithSlippage;
     }
@@ -197,7 +201,9 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             "ChocoMasterChef: Oups! Bad ingredient for Choco recipe"
         );
         require(
-            _amountA > 0 && _amountB > 0,
+            (_amountA > 0 && _amountB > 0) ||
+                (_amountA > 0 && _amountB == 0) ||
+                (_amountA == 0 && _amountB > 0),
             "ChocoMasterChef: No enough ingredients"
         );
         require(
@@ -207,16 +213,35 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
 
         IWETH weth = IWETH(router.WETH());
 
-        if (_tokenA == address(weth)) {
-            weth.deposit{value: _amountA}();
-        }
-        if (_tokenB == address(weth)) {
-            weth.deposit{value: _amountB}();
-        }
-
-        if (_amountA > 0 && _amountB == 0) {} else if (
-            _amountB > 0 && _amountA == 0
-        ) {} else {
+        if (_amountA > 0 && _amountB == 0) {
+            uint256 amountOut = _swap(_lpToken, _tokenA, _tokenB, _amountA / 2);
+            _amountA = _amountA / 2;
+            _amountB = amountOut;
+            if (_tokenA != address(weth)) {
+                IERC20(_tokenA).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _amountB
+                );
+            }
+        } else if (_amountB > 0 && _amountA == 0) {
+            uint256 amountOut = _swap(_lpToken, _tokenB, _tokenA, _amountB / 2);
+            _amountB = _amountB / 2;
+            _amountA = amountOut;
+            if (_tokenB != address(weth)) {
+                IERC20(_tokenB).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _amountB
+                );
+            }
+        } else {
+            if (_tokenA == address(weth)) {
+                weth.deposit{value: _amountA}();
+            }
+            if (_tokenB == address(weth)) {
+                weth.deposit{value: _amountB}();
+            }
             if (_tokenA != address(weth)) {
                 IERC20(_tokenA).safeTransferFrom(
                     msg.sender,
@@ -231,11 +256,11 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
                     _amountB
                 );
             }
-            
-            // why failing on safeApprove, maybe try universalApprove
-            IERC20(_tokenA).approve(address(router), _amountA);
-            IERC20(_tokenB).safeApprove(address(router), _amountB);
         }
+
+        // why failing when safeApproving, maybe try universalApprove
+        IERC20(_tokenA).approve(address(router), _amountA);
+        IERC20(_tokenB).approve(address(router), _amountB);
 
         (uint256 addedAmountA, uint256 addedAmountB, uint256 liquidity) = router
         .addLiquidity(
@@ -249,17 +274,20 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             _preparationDeadline
         );
 
-        if (_amountA > 0 && _amountB > 0) {
-            uint256 leftover;
-            if (_tokenA == address(weth)) {
-                leftover = _amountA.sub(addedAmountA);
-                weth.withdraw(leftover);
-                msg.sender.transfer(leftover);
+        if (_amountA - addedAmountA > 0) {
+            if (_tokenA != address(weth)) {
+                IERC20(_tokenA).transfer(msg.sender, _amountB - addedAmountB);
+            } else {
+                weth.withdraw(_amountB - addedAmountB);
+                msg.sender.transfer(_amountB - addedAmountB);
             }
-            if (_tokenB == address(weth)) {
-                leftover = _amountB.sub(addedAmountA);
-                weth.withdraw(leftover);
-                msg.sender.transfer(leftover);
+        }
+        if (_amountB - addedAmountB > 0) {
+            if (_tokenB != address(weth)) {
+                IERC20(_tokenB).transfer(msg.sender, _amountB - addedAmountB);
+            } else {
+                weth.withdraw(_amountB - addedAmountB);
+                msg.sender.transfer(_amountB - addedAmountB);
             }
         }
 
