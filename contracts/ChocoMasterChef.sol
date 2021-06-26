@@ -14,6 +14,14 @@ import {IUniswapV2Pair} from "./interfaces/UniswapV2/IUniswapV2Pair.sol";
 
 import "hardhat/console.sol";
 
+/**
+ * @title ChocoMasterChef Contract
+ * @author Rafael Romero (@rafius97)
+ * @notice ChocoMasterChef is the Choco maker, if you want choco,
+ * you should interact with this guy...
+ * @dev You can add liquidity with UniswapV2, stake UNI LP Tokens
+ * and claim Choco Token rewards .
+ */
 contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeERC20 for IERC20;
@@ -31,22 +39,56 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         uint256 accChocoPerShare;
     }
 
+    /**
+     * @notice ERC20 representation of the Choco Token
+     * @return Address of the Choco Token
+     */
     ChocoToken public choco;
 
+    /**
+     * @notice Bonus multiplier of reward
+     */
     uint256 public constant BONUS_MULTIPLIER = 20;
 
+    /**
+     * @notice Amount of Choco Token created per block 
+     */
     uint256 public chocoPerBlock;
 
+    /**
+     * @notice Index of the UniswapV2 LP
+     */
     uint256 public poolInfoCount;
+
+    /**
+     * @notice Mapping of PoolInfo
+     */
     mapping(uint256 => PoolInfo) public poolInfo;
+
+    /**
+     * @notice Mapping from a LP address to its index
+     */
     mapping(address => uint256) public poolInfoIndex;
 
+    /**
+     * @notice Mapping of UsreInfo giver a UniswapV2 LP
+     */
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
 
+    /**
+     * @notice Block number when Choco Token starts "mining"git 
+     */
     uint256 public startBlock;
 
+    /**
+     * @notice Total amount of allocations points of the UniswapV2 LP
+     */
     uint256 public totalAllocPoint;
 
+    /**
+     * @notice Representation of the UniswapV2 Router
+     * @return The address of the UniswapV2 Router
+     */
     IUniswapV2Router public router;
 
     event ChocoPotAdded(
@@ -78,6 +120,14 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         router = IUniswapV2Router(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     }
 
+    /**
+     * @notice Adds a new Choco Pot to fill with choco
+     * @dev Adds a new UniswapV2 Liquidity Pool to the contract
+     * @param _allocPoint Amount of allocation point to be assign to this pool
+     * @param _lpToken The address of the UniswapV2 Liquidity Pool
+     *
+     * Emits a {ChocoPotAdded} event.
+     */
     function addChocoPot(uint256 _allocPoint, address _lpToken)
         external
         onlyOwner
@@ -103,6 +153,13 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         emit ChocoPotAdded(poolInfoCount, _lpToken, _allocPoint);
     }
 
+    /**
+     * @dev Swaps `_amount` of `_token0` to `_token1` from `_pool` using UniswapV2
+     * @param _pool The address of the UniswapV2 Liquidity Pool
+     * @param _token0 Address of the token to be swapped
+     * @param _token1 Address of the token after to swap
+     * @param _amount Amount of the `_token0` to be swapped
+     */
     function _swap(
         address _pool,
         address _token0,
@@ -151,6 +208,18 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         return amountOutWithSlippage;
     }
 
+    /**
+     * @notice Add ingredients to a Choco Pot
+     * @dev See {_addIngredients}
+     * @param lpToken The address of the Choco Pot
+     * @param tokenA Address of the tokenA ingredient to be added to the Choco Pot
+     * @param tokenB Address of the tokenB ingredient to be added to the Choco Pot
+     * @param amountA Amount of the `tokenA` ingredient to be added
+     * @param amountB Amount of the `tokenB` ingredient to be added
+     * @param preparationDeadline Maximum amount of time to add the ingredients
+     *
+     * Emits a {IngredientsAdded} event.
+     */
     function addIngredients(
         address lpToken,
         address tokenA,
@@ -170,7 +239,18 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         );
     }
 
-    // add liquidity
+    /**
+     * @dev Adds liquidity to a UniswapV2 Liquidity Pool
+     * @param _lpToken The address of the UniswapV2 Liquidity Pool
+     * @param _tokenA One of two address of the token pair of the LP
+     * @param _tokenA One of two address of the token pair of the LP
+     * @param _amountA Amount of the `_tokenA` to be added in the liquidity pool
+     * @param _amountB Amount of the `_tokenB` to be added in the liquidity pool
+     * @param _preparationDeadline Maximum amount of time to add the liquidity
+     * @return The amount of UniswapV2 LP Tokens after add liquidity to the pool
+     *
+     * Emits a {IngredientsAdded} event.
+     */
     function _addIngredients(
         address _lpToken,
         address _tokenA,
@@ -292,11 +372,26 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         return liquidity;
     }
 
+    /**
+     * @notice Allows to prepare Choco by placing ingredients into the ChocoMasterChef
+     * @dev see {_prepareChoco}
+     * @param lpToken The address of the Choco Pot
+     * @param amount Amount of Choco to be prepared
+     *
+     * Emits a {ChocoPrepared} event.
+     */
     function prepareChoco(address lpToken, uint256 amount) external {
         _prepareChoco(lpToken, amount, msg.sender);
     }
 
-    // stake
+    /**
+     * @dev Allows to stake UniswapV2 Liquidity Pool Tokens into the ChocoMasterChef
+     * @param lpToken The address of UniswapV2 Liquidity Pool
+     * @param amount Amount of UniswapV2 Liquidity Pool tokens
+     * @param from Address of who is calling the function
+     *
+     * Emits a {ChocoPrepared} event.
+     */
     function _prepareChoco(
         address lpToken,
         uint256 amount,
@@ -314,6 +409,21 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         emit ChocoPrepared(msg.sender, lpToken, amount);
     }
 
+    /**
+     * @notice Add ingredients to a Choco Pot and start preparing
+     * @dev Allows to add liquidity and to stake UniswapV2 Liquidity Pool Tokens
+     * @dev into the ChocoMasterChef in a function
+     * @dev Also, you can see {_addIngredients} and {_prepareChoco} for more details
+     * @param lpToken The address of the Choco Pot
+     * @param tokenA Address of the tokenA ingredient to be added to the Choco Pot
+     * @param tokenB Address of the tokenB ingredient to be added to the Choco Pot
+     * @param amountA Amount of the `tokenA` ingredient to be added
+     * @param amountB Amount of the `tokenB` ingredient to be added
+     * @param preparationDeadline Maximum amount of time to add the ingredients
+     * @return The amount of UniswapV2 LP Tokens after add liquidity to the pool
+     *
+     * Emits {IngredientsAdded} and {ChocoPrepared} event.
+     */
     function addIngredientsAndPrepareChoco(
         address lpToken,
         address tokenA,
@@ -339,6 +449,14 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         return liquidity;
     }
 
+    /**
+     * @notice Claims the Choco Tokens rewards for placing ingredients and 
+     * @notice prepare Choco in the contract
+     * @param lpToken The address of UniswapV2 Liquidity Pool
+     * @param withdrawLPTokens If true, withdraw your UniswapV2 LP Tokens
+     *
+     * Emits a {ChocoClaimed} event.
+     */
     function claimChoco(address lpToken, bool withdrawLPTokens) external {
         uint256 _pid = poolInfoIndex[lpToken];
         PoolInfo storage pool = poolInfo[_pid];
@@ -356,6 +474,11 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         emit ChocoClaimed(msg.sender, _pid, reward);
     }
 
+    /**
+     * @notice Get multiplier for Choco Token reward
+     * @param from Last block rewarded given a pool
+     * @param to Current block by `block.number`
+     */
     function getMultiplier(uint256 from, uint256 to)
         public
         pure
@@ -367,6 +490,10 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
                 : from.add(1).sub(to).mul(BONUS_MULTIPLIER);
     }
 
+    /**
+     * @notice Updates the reward values of a pool
+     * @param _pid Index of a UniswapV2 Liquidity Pool
+     */
     function updatePool(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         if (block.number <= pool.lastRewardBlock) {
@@ -377,8 +504,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             pool.lastRewardBlock = block.number;
             return;
         }
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 chocoReward = multiplier
+        uint256 chocoReward = getMultiplier(pool.lastRewardBlock, block.number)
         .mul(chocoPerBlock)
         .mul(pool.allocPoint)
         .div(totalAllocPoint);
@@ -389,6 +515,11 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         pool.lastRewardBlock = block.number;
     }
 
+    /**
+     * @dev Transfer safely Choco Token
+     * @param _to Address to be transferred the Choco Tokens
+     * @param _amount Amount of Choco Tokens to be transferred
+     */
     function safeChocoTransfer(address _to, uint256 _amount) internal {
         uint256 chocoBal = choco.balanceOf(address(this));
         if (_amount > chocoBal) {
