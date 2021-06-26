@@ -1,4 +1,4 @@
-# hardhat-contract-quickstart
+# ChocoStaker
 
 ## Getting Started 🚀
 
@@ -13,13 +13,13 @@ _You need to have installed nodejs_
 _First you need to clone this repository_
 
 ```
-git clone https://github.com/rafius97/hardhat-contract-quickstart/
+git clone https://github.com/rafius97/ChocoStaker/
 ```
 
 _Make sure you are in the right folder_
 
 ```
-cd hardhat-contract-quickstart/
+cd ChocoStaker/
 ```
 
 _Next, you must to install the dependencies_
