@@ -314,8 +314,6 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         emit ChocoPrepared(msg.sender, lpToken, amount);
     }
 
-    function prepareChocoWithPermit() external {}
-
     function addIngredientsAndPrepareChoco(
         address lpToken,
         address tokenA,
