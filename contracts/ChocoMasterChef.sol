@@ -114,22 +114,14 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             _token0 != _token1,
             "ChocoMasterChef: You need more ingredients to mix, no just one"
         );
-        require(
-            _amount > 0, /* &&
-                IERC20(_token0).allowance(msg.sender, address(this)) >= _amount */
-            "ChocoMasterChef: No enough ingredients to mix"
-        );
+        require(_amount > 0, "ChocoMasterChef: No enough ingredients to mix");
 
         IWETH weth = IWETH(router.WETH());
 
         if (_token0 == address(weth)) {
             weth.deposit{value: _amount}();
         } else {
-            IERC20(_token0).safeTransferFrom(
-                msg.sender,
-                address(this),
-                _amount
-            );
+            IERC20(_token0).transferFrom(msg.sender, address(this), _amount);
         }
 
         IUniswapV2Pair pair = IUniswapV2Pair(_pool);
@@ -221,8 +213,10 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
                 IERC20(_tokenA).safeTransferFrom(
                     msg.sender,
                     address(this),
-                    _amountB
+                    _amountA
                 );
+            } else {
+                weth.deposit{value: _amountA}();
             }
         } else if (_amountB > 0 && _amountA == 0) {
             uint256 amountOut = _swap(_lpToken, _tokenB, _tokenA, _amountB / 2);
@@ -234,6 +228,8 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
                     address(this),
                     _amountB
                 );
+            } else {
+                weth.deposit{value: _amountB}();
             }
         } else {
             if (_tokenA == address(weth)) {
@@ -276,10 +272,10 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
 
         if (_amountA - addedAmountA > 0) {
             if (_tokenA != address(weth)) {
-                IERC20(_tokenA).transfer(msg.sender, _amountB - addedAmountB);
+                IERC20(_tokenA).transfer(msg.sender, _amountA - addedAmountA);
             } else {
-                weth.withdraw(_amountB - addedAmountB);
-                msg.sender.transfer(_amountB - addedAmountB);
+                weth.withdraw(_amountA - addedAmountA);
+                msg.sender.transfer(_amountA - addedAmountA);
             }
         }
         if (_amountB - addedAmountB > 0) {
