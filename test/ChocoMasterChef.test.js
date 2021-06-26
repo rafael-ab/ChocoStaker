@@ -41,6 +41,7 @@ const PLAYER_WITH_USDC = "0x62Fe3E658139E1b38b8BAE6013C26E5465A2A743"; // Accoun
 
 // Uniswap LP Tokens
 const LP_DAI_ETH = "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11";
+const LP_DAI_USDC = "0xAE461cA67B15dc8dc81CE7615e0320dA1A9aB8D5";
 const LP_USDC_ETH = "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc";
 const LP_USDT_ETH = "0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852";
 const LP_TUSD_ETH = "0xb4d0d9df2738abE81b87b66c80851292492D1404";
@@ -75,9 +76,20 @@ contract("ChocoMasterChef", () => {
     });
 
     const daiToken = await IERC20.at(DAI_ADDRESS);
-    await daiToken.transfer(PLAYER1, toWei(5000), { from: PLAYER_WITH_DAI });
-    await daiToken.transfer(PLAYER2, toWei(5000), { from: PLAYER_WITH_DAI });
-    await daiToken.transfer(PLAYER3, toWei(5000), { from: PLAYER_WITH_DAI });
+    await daiToken.transfer(PLAYER1, toWei(50000), { from: PLAYER_WITH_DAI });
+    await daiToken.transfer(PLAYER2, toWei(50000), { from: PLAYER_WITH_DAI });
+    await daiToken.transfer(PLAYER3, toWei(50000), { from: PLAYER_WITH_DAI });
+
+    const usdcToken = await IERC20.at(USDC_ADDRESS);
+    await usdcToken.transfer(PLAYER1, 50000 * 10 ** 6, {
+      from: PLAYER_WITH_USDC,
+    });
+    await usdcToken.transfer(PLAYER2, 50000 * 10 ** 6, {
+      from: PLAYER_WITH_USDC,
+    });
+    await usdcToken.transfer(PLAYER3, 50000 * 10 ** 6, {
+      from: PLAYER_WITH_USDC,
+    });
 
     chocoToken = await ChocoToken.new({ from: ADMIN });
 
@@ -93,6 +105,7 @@ contract("ChocoMasterChef", () => {
     await chocoToken.transferOwnership(chocoChef.address, { from: ADMIN });
 
     await chocoChef.addChocoPot(120, LP_DAI_ETH, { from: ADMIN });
+    await chocoChef.addChocoPot(60, LP_DAI_USDC, { from: ADMIN });
     await chocoChef.addChocoPot(30, LP_USDC_ETH, { from: ADMIN });
     await chocoChef.addChocoPot(10, LP_BAT_ETH, { from: ADMIN });
     await chocoChef.addChocoPot(25, LP_LINK_ETH, { from: ADMIN });
@@ -251,7 +264,90 @@ contract("ChocoMasterChef", () => {
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
 
-  it("player1 should stake his LP tokens using approve", async () => {
+  it("player2 should add liquidity to DAI/USDC LP Token", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    const daiToken = await IERC20.at(DAI_ADDRESS);
+    await daiToken.approve(chocoChef.address, toWei(500), {
+      from: PLAYER2,
+    });
+
+    const usdcToken = await IERC20.at(USDC_ADDRESS);
+    await usdcToken.approve(chocoChef.address, 500 * 10 ** 6, {
+      from: PLAYER2,
+    });
+
+    const tx = await chocoChef.addIngredients(
+      LP_DAI_USDC,
+      DAI_ADDRESS,
+      USDC_ADDRESS,
+      toWei(500),
+      500 * 10 ** 6,
+      timestamp + 1,
+      { from: PLAYER2 }
+    );
+
+    await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER2,
+      tokenA: DAI_ADDRESS,
+      tokenB: USDC_ADDRESS,
+      amountA: toWei(500),
+      amountB: toBN(500 * 10 ** 6),
+    });
+
+    const daiUSDCLPToken = await IERC20.at(LP_DAI_USDC);
+    const balancePlayer2 = await daiUSDCLPToken.balanceOf(PLAYER2);
+    console.log(
+      "\tPLAYER2 LP Tokens :>> ",
+      (Number(balancePlayer2) / 10 ** 18).toFixed(18)
+    );
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
+  it("player1 should add liquidity to DAI/USDC LP Token with only DAI", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    const daiToken = await IERC20.at(DAI_ADDRESS);
+    await daiToken.approve(chocoChef.address, toWei(500), {
+      from: PLAYER1,
+    });
+
+    const tx = await chocoChef.addIngredients(
+      LP_DAI_USDC,
+      DAI_ADDRESS,
+      USDC_ADDRESS,
+      toWei(500),
+      0,
+      timestamp + 1,
+      { from: PLAYER1 }
+    );
+
+    /* await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER1,
+      tokenA: DAI_ADDRESS,
+      tokenB: USDC_ADDRESS,
+      amountA: toWei(250),
+      amountB: toBN(0),
+    }); */
+
+    const daiUSDCLPToken = await IERC20.at(LP_DAI_USDC);
+    const balancePlayer1 = await daiUSDCLPToken.balanceOf(PLAYER1);
+    console.log(
+      "\tPLAYER1 LP Tokens :>> ",
+      (Number(balancePlayer1) / 10 ** 18).toFixed(18)
+    );
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
+  it("player1 should stake his DAI-ETH LP tokens using approve", async () => {
     console.log(
       "    ------------------------------------------------------------------"
     );
@@ -299,7 +395,7 @@ contract("ChocoMasterChef", () => {
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
 
-  it("player2 should stake his LP tokens using permit", async () => {
+  it("player2 should stake his DAI-ETH LP tokens using permit", async () => {
     console.log(
       "    ------------------------------------------------------------------"
     );
@@ -363,7 +459,7 @@ contract("ChocoMasterChef", () => {
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
 
-  it("player3 should add liquidity and stake his LP tokens in one transaction", async () => {
+  it("player3 should add liquidity and stake his DAI-ETH LP tokens in one transaction", async () => {
     console.log(
       "    ------------------------------------------------------------------"
     );
