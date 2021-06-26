@@ -512,7 +512,7 @@ contract("ChocoMasterChef", () => {
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
 
-  it("player1 should claim rewards", async () => {
+  it("player1 should claim rewards y get back DAI-ETH LP Tokens", async () => {
     console.log(
       "    ------------------------------------------------------------------"
     );
@@ -526,7 +526,7 @@ contract("ChocoMasterChef", () => {
       (Number(balancePlayer1Before) / 10 ** 18).toFixed(18)
     );
 
-    const tx = await chocoChef.claimChoco(LP_DAI_ETH, { from: PLAYER1 });
+    const tx = await chocoChef.claimChoco(LP_DAI_ETH, true, { from: PLAYER1 });
 
     const balancePlayer1After = await chocoToken.balanceOf(PLAYER1);
     console.log(
@@ -538,6 +538,37 @@ contract("ChocoMasterChef", () => {
       user: PLAYER1,
       lpToken: LP_DAI,
       amount: balancePlayer1,
+    }); */
+
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
+  it("player2 should claim only rewards", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const daiLPToken = await IERC20.at(LP_DAI_ETH);
+    const balancePlayer2 = await daiLPToken.balanceOf(PLAYER2);
+
+    const balancePlayer2Before = await chocoToken.balanceOf(PLAYER2);
+    console.log(
+      "\tPLAYER2 Choco Tokens \t\t(Before) :>> ",
+      (Number(balancePlayer2Before) / 10 ** 18).toFixed(18)
+    );
+
+    const tx = await chocoChef.claimChoco(LP_DAI_ETH, false, { from: PLAYER2 });
+
+    const balancePlayer2After = await chocoToken.balanceOf(PLAYER2);
+    console.log(
+      "\tPLAYER2 Choco Tokens \t\t(After) :>> ",
+      (Number(balancePlayer2After) / 10 ** 18).toFixed(18)
+    );
+
+    /* await expectEvent(tx, "ChocoPrepared", {
+      user: PLAYER2,
+      lpToken: LP_DAI_ETH,
+      amount: balancePlayer2,
     }); */
 
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);

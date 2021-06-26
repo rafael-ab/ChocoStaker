@@ -339,7 +339,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         return liquidity;
     }
 
-    function claimChoco(address lpToken) external {
+    function claimChoco(address lpToken, bool withdrawLPTokens) external {
         uint256 _pid = poolInfoIndex[lpToken];
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -348,8 +348,10 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             user.rewardDebt
         );
         safeChocoTransfer(msg.sender, reward);
-        pool.lpToken.safeTransfer(address(msg.sender), user.amount);
-        user.amount = 0;
+        if (withdrawLPTokens) {
+            pool.lpToken.safeTransfer(address(msg.sender), user.amount);
+            user.amount = 0;
+        }
         user.rewardDebt = 0;
         emit ChocoClaimed(msg.sender, _pid, reward);
     }
