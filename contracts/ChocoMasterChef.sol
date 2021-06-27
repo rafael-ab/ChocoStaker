@@ -9,7 +9,6 @@ import {IERC20} from "./interfaces/IERC20.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 import {SafeERC20} from "./libraries/SafeERC20.sol";
 import {IUniswapV2Router} from "./interfaces/UniswapV2/IUniswapV2Router.sol";
-import {IUniswapV2Factory} from "./interfaces/UniswapV2/IUniswapV2Factory.sol";
 import {IUniswapV2Pair} from "./interfaces/UniswapV2/IUniswapV2Pair.sol";
 
 import "hardhat/console.sol";
@@ -35,7 +34,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     }
 
     struct PoolInfo {
-        // ERC20 UniswapV2 Liquidity Pool
+        // ERC20 UniswapV2 Liquidity Pool Tokens
         IERC20 lpToken;
         // amount of allocations point of the pool
         uint256 allocPoint;
