@@ -512,6 +512,59 @@ contract("ChocoMasterChef", () => {
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
 
+  it("player3 should add liquidity and stake his USDT-ETH LP tokens in one transaction", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    /* const daiToken = await IERC20.at(DAI_ADDRESS);
+    await daiToken.approve(chocoChef.address, toWei(1500), { from: PLAYER3 }); */
+
+    const usdtLPToken = await IERC20.at(LP_USDT_ETH);
+
+    const balanceChocoChefBefore = await usdtLPToken.balanceOf(
+      chocoChef.address
+    );
+    console.log(
+      "\tChocoMasterChef LP Tokens \t(Before) :>> ",
+      (Number(balanceChocoChefBefore) / 10 ** 18).toFixed(18)
+    );
+
+    const tx = await chocoChef.addIngredientsAndPrepareChoco(
+      LP_USDT_ETH,
+      WETH_ADDRESS,
+      USDT_ADDRESS,
+      toWei(1),
+      0,
+      timestamp + 1,
+      { from: PLAYER3, value: toWei(1) }
+    );
+
+    const balanceChocoChefAfter = await usdtLPToken.balanceOf(chocoChef.address);
+    console.log(
+      "\tChocoMasterChef LP Tokens \t(After) :>> ",
+      (Number(balanceChocoChefAfter) / 10 ** 18).toFixed(18)
+    );
+
+    /* await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER3,
+      tokenA: WETH_ADDRESS,
+      tokenB: DAI_ADDRESS,
+      amountA: toWei(1),
+      amountB: toWei(1500),
+    }); */
+
+    /* await expectEvent(tx, "ChocoPrepared", {
+      user: PLAYER3,
+      token: LP_DAI_ETH,
+      amount: balancePlayer2, // TODO: how to get the liquidity
+    }); */
+
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
   it("player1 should claim rewards y get back DAI-ETH LP Tokens", async () => {
     console.log(
       "    ------------------------------------------------------------------"
