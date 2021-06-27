@@ -58,7 +58,7 @@ library SafeERC20 {
         // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
         // solhint-disable-next-line max-line-length
         require(
-            (value == 0) || (token.allowance(address(this), spender) == 0),
+            (value == 0) || (token.allowance(msg.sender, spender) == 0),
             "SafeERC20: approve from non-zero to non-zero allowance"
         );
         _callOptionalReturn(
@@ -72,7 +72,7 @@ library SafeERC20 {
         address spender,
         uint256 value
     ) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).add(
+        uint256 newAllowance = token.allowance(msg.sender, spender).add(
             value
         );
         _callOptionalReturn(
@@ -90,7 +90,7 @@ library SafeERC20 {
         address spender,
         uint256 value
     ) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).sub(
+        uint256 newAllowance = token.allowance(msg.sender, spender).sub(
             value,
             "SafeERC20: decreased allowance below zero"
         );
