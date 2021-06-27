@@ -51,7 +51,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     uint256 public constant BONUS_MULTIPLIER = 20;
 
     /**
-     * @notice Amount of Choco Token created per block 
+     * @notice Amount of Choco Token created per block
      */
     uint256 public chocoPerBlock;
 
@@ -76,7 +76,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
 
     /**
-     * @notice Block number when Choco Token starts "mining"git 
+     * @notice Block number when Choco Token starts "mining"git
      */
     uint256 public startBlock;
 
@@ -178,7 +178,11 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         if (_token0 == address(weth)) {
             weth.deposit{value: _amount}();
         } else {
-            IERC20(_token0).safeTransferFrom(msg.sender, address(this), _amount);
+            IERC20(_token0).safeTransferFrom(
+                msg.sender,
+                address(this),
+                _amount
+            );
         }
 
         IUniswapV2Pair pair = IUniswapV2Pair(_pool);
@@ -352,7 +356,10 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
 
         if (_amountA - addedAmountA > 0) {
             if (_tokenA != address(weth)) {
-                IERC20(_tokenA).safeTransfer(msg.sender, _amountA - addedAmountA);
+                IERC20(_tokenA).safeTransfer(
+                    msg.sender,
+                    _amountA - addedAmountA
+                );
             } else {
                 weth.withdraw(_amountA - addedAmountA);
                 msg.sender.transfer(_amountA - addedAmountA);
@@ -360,7 +367,10 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         }
         if (_amountB - addedAmountB > 0) {
             if (_tokenB != address(weth)) {
-                IERC20(_tokenB).safeTransfer(msg.sender, _amountB - addedAmountB);
+                IERC20(_tokenB).safeTransfer(
+                    msg.sender,
+                    _amountB - addedAmountB
+                );
             } else {
                 weth.withdraw(_amountB - addedAmountB);
                 msg.sender.transfer(_amountB - addedAmountB);
@@ -450,7 +460,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Claims the Choco Tokens rewards for placing ingredients and 
+     * @notice Claims the Choco Tokens rewards for placing ingredients and
      * @notice prepare Choco in the contract
      * @param lpToken The address of UniswapV2 Liquidity Pool
      * @param withdrawLPTokens If true, withdraw your UniswapV2 LP Tokens

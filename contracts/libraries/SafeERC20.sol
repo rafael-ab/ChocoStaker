@@ -72,9 +72,7 @@ library SafeERC20 {
         address spender,
         uint256 value
     ) internal {
-        uint256 newAllowance = token.allowance(msg.sender, spender).add(
-            value
-        );
+        uint256 newAllowance = token.allowance(msg.sender, spender).add(value);
         _callOptionalReturn(
             token,
             abi.encodeWithSelector(
