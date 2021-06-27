@@ -178,7 +178,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         if (_token0 == address(weth)) {
             weth.deposit{value: _amount}();
         } else {
-            IERC20(_token0).transferFrom(msg.sender, address(this), _amount);
+            IERC20(_token0).safeTransferFrom(msg.sender, address(this), _amount);
         }
 
         IUniswapV2Pair pair = IUniswapV2Pair(_pool);
@@ -335,8 +335,8 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         }
 
         // why failing when safeApproving, maybe try universalApprove
-        IERC20(_tokenA).approve(address(router), _amountA);
-        IERC20(_tokenB).approve(address(router), _amountB);
+        IERC20(_tokenA).safeApprove(address(router), _amountA);
+        IERC20(_tokenB).safeApprove(address(router), _amountB);
 
         (uint256 addedAmountA, uint256 addedAmountB, uint256 liquidity) = router
         .addLiquidity(
@@ -352,7 +352,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
 
         if (_amountA - addedAmountA > 0) {
             if (_tokenA != address(weth)) {
-                IERC20(_tokenA).transfer(msg.sender, _amountA - addedAmountA);
+                IERC20(_tokenA).safeTransfer(msg.sender, _amountA - addedAmountA);
             } else {
                 weth.withdraw(_amountA - addedAmountA);
                 msg.sender.transfer(_amountA - addedAmountA);
@@ -360,7 +360,7 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         }
         if (_amountB - addedAmountB > 0) {
             if (_tokenB != address(weth)) {
-                IERC20(_tokenB).transfer(msg.sender, _amountB - addedAmountB);
+                IERC20(_tokenB).safeTransfer(msg.sender, _amountB - addedAmountB);
             } else {
                 weth.withdraw(_amountB - addedAmountB);
                 msg.sender.transfer(_amountB - addedAmountB);
