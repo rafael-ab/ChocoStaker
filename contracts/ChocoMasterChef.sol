@@ -28,14 +28,20 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     using SafeERC20 for IWETH;
 
     struct UserInfo {
+        // amount of LP tokens
         uint256 amount;
+        // amount of reward in Choco Tokens
         uint256 rewardDebt;
     }
 
     struct PoolInfo {
+        // ERC20 UniswapV2 Liquidity Pool
         IERC20 lpToken;
+        // amount of allocations point of the pool
         uint256 allocPoint;
+        // last block number rewarded
         uint256 lastRewardBlock;
+        // accumulated Choco Token, updated every time a user stake its LP tokens
         uint256 accChocoPerShare;
     }
 
