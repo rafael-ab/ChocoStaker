@@ -71,12 +71,12 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
     mapping(address => uint256) public poolInfoIndex;
 
     /**
-     * @notice Mapping of UsreInfo giver a UniswapV2 LP
+     * @notice Mapping of UserInfo giver a UniswapV2 LP
      */
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
 
     /**
-     * @notice Block number when Choco Token starts "mining"git
+     * @notice Block number when Choco Token starts "mining"
      */
     uint256 public startBlock;
 
