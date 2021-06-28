@@ -125,7 +125,7 @@ contract("ChocoMasterChef", () => {
     await chocoChef.addChocoPot(40, LP_TUSD_ETH, { from: ADMIN });
   });
 
-  it("player1 should add liquidity to DAI/ETH LP Token", async () => {
+  it("player1 should add liquidity to DAI/ETH LP Token and using DAI permit", async () => {
     console.log(
       "    ------------------------------------------------------------------"
     );
