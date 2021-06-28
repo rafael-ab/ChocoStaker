@@ -1,27 +1,24 @@
+const { web3, ethers } = require("hardhat");
 const { ecsign } = require("ethereumjs-util");
-const { hexlify } = require("ethers-utils");
-const { keccak256, toUtf8Bytes, solidityPack } = require("ethers-utils");
-const { web3 } = require("hardhat");
-const { time } = require("@openzeppelin/test-helpers");
 
-const PERMIT_TYPEHASH = keccak256(
-  toUtf8Bytes(
+const ERC20PERMIT_TYPEHASH = ethers.utils.keccak256(
+  ethers.utils.toUtf8Bytes(
     "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
   )
 );
 
 function getDomainSeparator(name, tokenAddress) {
-  return keccak256(
+  return ethers.utils.keccak256(
     web3.eth.abi.encodeParameters(
       ["bytes32", "bytes32", "bytes32", "uint256", "address"],
       [
-        keccak256(
-          toUtf8Bytes(
+        ethers.utils.keccak256(
+          ethers.utils.toUtf8Bytes(
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
           )
         ),
-        keccak256(toUtf8Bytes(name)),
-        keccak256(toUtf8Bytes("1")),
+        ethers.utils.keccak256(ethers.utils.toUtf8Bytes(name)),
+        ethers.utils.keccak256(ethers.utils.toUtf8Bytes("1")),
         1,
         tokenAddress,
       ]
@@ -39,17 +36,17 @@ const getApprovalDigest = async (
 ) => {
   const name = await token.name();
   const DOMAIN_SEPARATOR = getDomainSeparator(name, token.address);
-  return keccak256(
-    solidityPack(
+  return ethers.utils.keccak256(
+    ethers.utils.solidityPack(
       ["bytes1", "bytes1", "bytes32", "bytes32"],
       [
         "0x19",
         "0x01",
         DOMAIN_SEPARATOR,
-        keccak256(
+        ethers.utils.keccak256(
           web3.eth.abi.encodeParameters(
             ["bytes32", "address", "address", "uint256", "uint256", "uint256"],
-            [PERMIT_TYPEHASH, owner, spender, value, nonce, deadline]
+            [ERC20PERMIT_TYPEHASH, owner, spender, value, nonce, deadline]
           )
         ),
       ]
@@ -57,9 +54,8 @@ const getApprovalDigest = async (
   );
 };
 
-const signTokenPermit = async (token, sender, senderPk, spender, value) => {
+const signERC20PermitToken = async (token, sender, senderPk, spender, value, deadline) => {
   const nonce = await token.nonces(sender);
-  const deadline = (await time.latest()) + 1;
   const digest = await getApprovalDigest(
     token,
     sender,
@@ -77,12 +73,12 @@ const signTokenPermit = async (token, sender, senderPk, spender, value) => {
   return {
     deadline,
     v,
-    r: hexlify(r),
-    s: hexlify(s),
+    r: ethers.utils.hexlify(r),
+    s: ethers.utils.hexlify(s),
   };
 };
 
 module.exports = {
   getApprovalDigest,
-  signTokenPermit,
+  signERC20PermitToken,
 };

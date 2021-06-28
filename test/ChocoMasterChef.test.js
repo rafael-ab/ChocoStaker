@@ -12,7 +12,7 @@ const {
 } = require("@openzeppelin/test-helpers");
 
 // message signer tools
-const { signTokenPermit } = require("./utils/signerUtils");
+const { signERC20PermitToken } = require("./utils/signerUtils");
 
 // Token Address
 const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
@@ -414,13 +414,16 @@ contract("ChocoMasterChef", () => {
     const daiLPToken = await IUniV2ERC20.at(LP_DAI_ETH);
     const balancePlayer2 = await daiLPToken.balanceOf(PLAYER2);
 
+    const timestamp = await time.latest();
+
     // signing data
-    const result = await signTokenPermit(
+    const result = await signERC20PermitToken(
       daiLPToken,
       PLAYER2,
       PLAYER2_PK,
       chocoChef.address,
-      balancePlayer2
+      balancePlayer2,
+      timestamp + 1
     );
 
     await daiLPToken.permit(
