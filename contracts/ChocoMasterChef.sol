@@ -10,6 +10,7 @@ import {IWETH} from "./interfaces/IWETH.sol";
 import {SafeERC20} from "./libraries/SafeERC20.sol";
 import {IUniswapV2Router} from "./interfaces/UniswapV2/IUniswapV2Router.sol";
 import {IUniswapV2Pair} from "./interfaces/UniswapV2/IUniswapV2Pair.sol";
+import {IUniswapV2Factory} from "./interfaces/UniswapV2/IUniswapV2Factory.sol";
 
 import "hardhat/console.sol";
 
@@ -183,11 +184,13 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         if (_token0 == address(weth)) {
             weth.deposit{value: _amount}();
         } else {
-            IERC20(_token0).safeTransferFrom(
-                msg.sender,
-                address(this),
-                _amount
-            );
+            if (IERC20(_token0).allowance(msg.sender, address(this)) > 0) {
+                IERC20(_token0).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _amount
+                );
+            }
         }
 
         IUniswapV2Pair pair = IUniswapV2Pair(_pool);
@@ -246,6 +249,98 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             msg.sender,
             preparationDeadline
         );
+    }
+
+    /**
+     * @notice Mix and add ingredients to a Choco Pot
+     * @dev First, swaps the ´tokenPayment´ to TokenA, then swaps
+     * @dev the half of the TokenA to TokenB to get some proportionals amount
+     * @param tokenA Address of the tokenA ingredient to be added to the Choco Pot
+     * @param tokenB Address of the tokenB ingredient to be added to the Choco Pot
+     * @param tokenPayment Address of the tokenPayment ingredient to mix tokenA and Tokenb
+     * @param amountPayment Amount of tokenPayment to be mixed
+     * @param preparationDeadline Maximum amount of time to mix and to add the ingredients
+     *
+     * Emits a {IngredientsAdded} event.
+     */
+    function mixingAndAddIngredients(
+        address tokenA,
+        address tokenB,
+        address tokenPayment,
+        uint256 amountPayment,
+        uint256 preparationDeadline
+    ) external payable returns (uint256) {
+        require(
+            tokenPayment != address(0) ||
+                tokenA != address(0) ||
+                tokenB != address(0)
+        );
+        require(tokenPayment != tokenA && tokenPayment != tokenB);
+        if (tokenPayment == router.WETH()) {
+            require(msg.value > 0 && amountPayment == msg.value);
+        } else {
+            require(amountPayment > 0);
+        }
+
+        IUniswapV2Factory factory = IUniswapV2Factory(router.factory());
+
+        uint256 amountAOut = _swap(
+            factory.getPair(tokenPayment, tokenA),
+            tokenPayment,
+            tokenA,
+            amountPayment
+        );
+
+        address lpToken = factory.getPair(tokenA, tokenB);
+
+        uint256 amountBOut = _swap(lpToken, tokenA, tokenB, amountAOut / 2);
+
+        IERC20(tokenA).safeApprove(address(router), amountAOut / 2);
+        IERC20(tokenB).safeApprove(address(router), amountBOut);
+
+        (uint256 addedAmountA, uint256 addedAmountB, uint256 liquidity) = router
+        .addLiquidity(
+            tokenA,
+            tokenB,
+            amountAOut / 2,
+            amountBOut,
+            1,
+            1,
+            msg.sender,
+            block.timestamp + 1
+        );
+
+        if (tokenA != router.WETH()) {
+            IERC20(tokenA).safeTransfer(
+                msg.sender,
+                IERC20(tokenA).balanceOf(address(this))
+            );
+        } else {
+            IWETH(router.WETH()).withdraw(
+                IERC20(tokenA).balanceOf(address(this))
+            );
+        }
+
+        if (tokenB != router.WETH()) {
+            IERC20(tokenB).safeTransfer(
+                msg.sender,
+                IERC20(tokenB).balanceOf(address(this))
+            );
+        } else {
+            IWETH(router.WETH()).withdraw(
+                IERC20(tokenB).balanceOf(address(this))
+            );
+        }
+
+        emit IngredientsAdded(
+            msg.sender,
+            tokenA,
+            tokenB,
+            amountAOut / 2,
+            amountBOut
+        );
+
+        return liquidity;
     }
 
     /**
@@ -343,7 +438,6 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             }
         }
 
-        // why failing when safeApproving, maybe try universalApprove
         IERC20(_tokenA).safeApprove(address(router), _amountA);
         IERC20(_tokenB).safeApprove(address(router), _amountB);
 

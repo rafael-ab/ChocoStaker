@@ -91,6 +91,17 @@ contract("ChocoMasterChef", () => {
       from: PLAYER_WITH_USDC,
     });
 
+    const usdtToken = await IERC20.at(USDT_ADDRESS);
+    await usdtToken.transfer(PLAYER1, 50000 * 10 ** 6, {
+      from: PLAYER_WITH_USDT,
+    });
+    await usdtToken.transfer(PLAYER2, 50000 * 10 ** 6, {
+      from: PLAYER_WITH_USDT,
+    });
+    await usdtToken.transfer(PLAYER3, 50000 * 10 ** 6, {
+      from: PLAYER_WITH_USDT,
+    });
+
     chocoToken = await ChocoToken.new({ from: ADMIN });
 
     chocoChef = await ChocoMasterChef.new({ from: ADMIN });
@@ -624,6 +635,139 @@ contract("ChocoMasterChef", () => {
       amount: balancePlayer2,
     }); */
 
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
+
+  it("player2 should add liquidity in DAI-USDC Liquidity Pool using USDT", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    const usdtToken = await IERC20.at(USDT_ADDRESS);
+    await usdtToken.approve(chocoChef.address, 2500 * 10 ** 6, {
+      from: PLAYER2,
+    });
+
+    const daiUSDCLPToken = await IERC20.at(LP_DAI_USDC);
+    const balancePlayer2Before = await daiUSDCLPToken.balanceOf(PLAYER2);
+    console.log(
+      "\tPLAYER2 LP Tokens \t\t(Before) :>> ",
+      (Number(balancePlayer2Before) / 10 ** 18).toFixed(18)
+    );
+
+    const tx = await chocoChef.mixingAndAddIngredients(
+      DAI_ADDRESS,
+      USDC_ADDRESS,
+      USDT_ADDRESS,
+      2500 * 10 ** 6,
+      timestamp + 1,
+      { from: PLAYER2, value: 0 }
+    );
+
+    /* await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER2,
+      tokenA: WETH_ADDRESS,
+      tokenB: DAI_ADDRESS,
+      amountA: toWei(2),
+      amountB: 2500 * 10 ** 6,
+    }); */
+
+    const balancePlayer2 = await daiUSDCLPToken.balanceOf(PLAYER2);
+    console.log(
+      "\tPLAYER2 LP Tokens \t\t(After) :>> ",
+      (Number(balancePlayer2) / 10 ** 18).toFixed(18)
+    );
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
+  it("player3 should add liquidity in DAI-USDC Liquidity Pool using ETH", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    /* const usdtToken = await IERC20.at(USDT_ADDRESS);
+    await usdtToken.approve(chocoChef.address, 2500 * 10 ** 6, {
+      from: PLAYER3,
+    }); */
+
+    const daiUSDCLPToken = await IERC20.at(LP_DAI_USDC);
+    const balancePlayer3Before = await daiUSDCLPToken.balanceOf(PLAYER3);
+    console.log(
+      "\tPLAYER3 LP Tokens \t\t(Before) :>> ",
+      (Number(balancePlayer3Before) / 10 ** 18).toFixed(18)
+    );
+
+    const tx = await chocoChef.mixingAndAddIngredients(
+      DAI_ADDRESS,
+      USDC_ADDRESS,
+      WETH_ADDRESS,
+      toWei(3),
+      timestamp + 1,
+      { from: PLAYER3, value: toWei(3) }
+    );
+
+    /* await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER3,
+      tokenA: WETH_ADDRESS,
+      tokenB: DAI_ADDRESS,
+      amountA: toWei(2),
+      amountB: 2500 * 10 ** 6,
+    }); */
+
+    const balancePlayer3 = await daiUSDCLPToken.balanceOf(PLAYER3);
+    console.log(
+      "\tPLAYER3 LP Tokens \t\t(After) :>> ",
+      (Number(balancePlayer3) / 10 ** 18).toFixed(18)
+    );
+    console.log("\tGas Used :>> ", tx.receipt.gasUsed);
+  });
+
+  it("player1 should add liquidity in DAI-ETH Liquidity Pool using USDT", async () => {
+    console.log(
+      "    ------------------------------------------------------------------"
+    );
+
+    const timestamp = await time.latest();
+
+    const usdtToken = await IERC20.at(USDT_ADDRESS);
+    await usdtToken.approve(chocoChef.address, 5000 * 10 ** 6, {
+      from: PLAYER1,
+    });
+
+    const daiETHLPToken = await IERC20.at(LP_DAI_ETH);
+    const balancePlayer1Before = await daiETHLPToken.balanceOf(PLAYER1);
+    console.log(
+      "\tPLAYER1 LP Tokens \t\t(Before) :>> ",
+      (Number(balancePlayer1Before) / 10 ** 18).toFixed(18)
+    );
+
+    const tx = await chocoChef.mixingAndAddIngredients(
+      DAI_ADDRESS,
+      WETH_ADDRESS,
+      USDT_ADDRESS,
+      5000 * 10 ** 6,
+      timestamp + 1,
+      { from: PLAYER1, value: 0 }
+    );
+
+    /* await expectEvent(tx, "IngredientsAdded", {
+      user: PLAYER1,
+      tokenA: WETH_ADDRESS,
+      tokenB: DAI_ADDRESS,
+      amountA: toWei(2),
+      amountB: 2500 * 10 ** 6,
+    }); */
+
+    const balancePlayer1 = await daiETHLPToken.balanceOf(PLAYER1);
+    console.log(
+      "\tPLAYER1 LP Tokens \t\t(After) :>> ",
+      (Number(balancePlayer1) / 10 ** 18).toFixed(18)
+    );
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
 });
