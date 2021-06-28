@@ -4,6 +4,7 @@ const IERC20 = artifacts.require(
   "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20"
 );
 const IUniV2ERC20 = artifacts.require("IUniswapV2ERC20");
+const IDAI = artifacts.require("IDAI");
 const { assert, web3, network } = require("hardhat");
 const {
   expectEvent,
@@ -12,7 +13,7 @@ const {
 } = require("@openzeppelin/test-helpers");
 
 // message signer tools
-const { signERC20PermitToken } = require("./utils/signerUtils");
+const { signERC20PermitToken, signDAIToken } = require("./utils/signerUtils");
 
 // Token Address
 const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
@@ -129,12 +130,31 @@ contract("ChocoMasterChef", () => {
       "    ------------------------------------------------------------------"
     );
 
+    const daiETHLPToken = await IUniV2ERC20.at(LP_DAI_ETH);
+    const daiToken = await IDAI.at(DAI_ADDRESS);
+
     const timestamp = await time.latest();
 
-    const daiToken = await IERC20.at(DAI_ADDRESS);
-    await daiToken.approve(chocoChef.address, toWei(2500), {
-      from: PLAYER1,
-    });
+    // signing data
+    const result = await signDAIToken(
+      daiToken,
+      PLAYER1,
+      PLAYER1_PK,
+      chocoChef.address,
+      timestamp + 1,
+      true
+    );
+    
+    await daiToken.permit(
+      PLAYER1,
+      chocoChef.address,
+      result.nonce,
+      result.expiry,
+      result.allowed,
+      result.v,
+      result.r,
+      result.s
+    );
 
     const tx = await chocoChef.addIngredients(
       LP_DAI_ETH,
@@ -154,7 +174,6 @@ contract("ChocoMasterChef", () => {
       amountB: toWei(2500),
     });
 
-    const daiETHLPToken = await IERC20.at(LP_DAI_ETH);
     const balancePlayer1 = await daiETHLPToken.balanceOf(PLAYER1);
     console.log(
       "\tPLAYER1 LP Tokens :>> ",
@@ -556,7 +575,9 @@ contract("ChocoMasterChef", () => {
       { from: PLAYER3, value: toWei(1) }
     );
 
-    const balanceChocoChefAfter = await usdtLPToken.balanceOf(chocoChef.address);
+    const balanceChocoChefAfter = await usdtLPToken.balanceOf(
+      chocoChef.address
+    );
     console.log(
       "\tChocoMasterChef LP Tokens \t(After) :>> ",
       (Number(balanceChocoChefAfter) / 10 ** 18).toFixed(18)
@@ -640,7 +661,6 @@ contract("ChocoMasterChef", () => {
 
     console.log("\tGas Used :>> ", tx.receipt.gasUsed);
   });
-
 
   it("player2 should add liquidity in DAI-USDC Liquidity Pool using USDT", async () => {
     console.log(
