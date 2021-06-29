@@ -251,10 +251,42 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         );
     }
 
+    function mixingAndAddIngredientsAndPrepareChoco(
+        address tokenA,
+        address tokenB,
+        address tokenPayment,
+        uint256 amountPayment,
+        uint256 preparationDeadline
+    ) external payable {
+        IUniswapV2Factory factory = IUniswapV2Factory(router.factory());
+
+        (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        ) = _mixingAndAddIngredients(
+            factory,
+            tokenA,
+            tokenB,
+            tokenPayment,
+            amountPayment,
+            preparationDeadline
+        );
+
+        address lpToken = IUniswapV2Factory(router.factory()).getPair(
+            tokenA,
+            tokenB
+        );
+
+        _prepareChoco(lpToken, liquidity, address(this));
+
+        emit IngredientsAdded(msg.sender, tokenA, tokenB, amountA, amountB);
+        emit ChocoPrepared(msg.sender, lpToken, liquidity);
+    }
+
     /**
      * @notice Mix and add ingredients to a Choco Pot
-     * @dev First, swaps the ´tokenPayment´ to TokenA, then swaps
-     * @dev the half of the TokenA to TokenB to get some proportionals amount
+     * @dev See {_mixingAndAddIngredients}
      * @param tokenA Address of the tokenA ingredient to be added to the Choco Pot
      * @param tokenB Address of the tokenB ingredient to be added to the Choco Pot
      * @param tokenPayment Address of the tokenPayment ingredient to mix tokenA and Tokenb
@@ -269,7 +301,45 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
         address tokenPayment,
         uint256 amountPayment,
         uint256 preparationDeadline
-    ) external payable returns (uint256) {
+    ) external payable {
+        IUniswapV2Factory factory = IUniswapV2Factory(router.factory());
+        _mixingAndAddIngredients(
+            factory,
+            tokenA,
+            tokenB,
+            tokenPayment,
+            amountPayment,
+            preparationDeadline
+        );
+    }
+
+    /**
+     * @dev First, swaps the ´tokenPayment´ to TokenA, then swaps
+     * @dev the half of the TokenA to TokenB to get some proportionals amount
+     * @param tokenA Address of the tokenA ingredient to be added to the Choco Pot
+     * @param tokenB Address of the tokenB ingredient to be added to the Choco Pot
+     * @param tokenPayment Address of the tokenPayment ingredient to mix tokenA and Tokenb
+     * @param amountPayment Amount of tokenPayment to be mixed
+     * @param preparationDeadline Maximum amount of time to mix and to add the ingredients
+     * @return Amount of UniswapV2 LP Tokens
+     *
+     * Emits a {IngredientsAdded} event.
+     */
+    function _mixingAndAddIngredients(
+        IUniswapV2Factory factory,
+        address tokenA,
+        address tokenB,
+        address tokenPayment,
+        uint256 amountPayment,
+        uint256 preparationDeadline
+    )
+        internal
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         require(
             tokenPayment != address(0) ||
                 tokenA != address(0) ||
@@ -282,8 +352,6 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             require(amountPayment > 0);
         }
 
-        IUniswapV2Factory factory = IUniswapV2Factory(router.factory());
-
         uint256 amountAOut = _swap(
             factory.getPair(tokenPayment, tokenA),
             tokenPayment,
@@ -295,13 +363,16 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
 
         uint256 amountBOut = _swap(lpToken, tokenA, tokenB, amountAOut / 2);
 
-        IERC20(tokenA).safeApprove(address(router), amountAOut / 2);
-        IERC20(tokenB).safeApprove(address(router), amountBOut);
+        IERC20 _tokenA = IERC20(tokenA);
+        IERC20 _tokenB = IERC20(tokenB);
+
+        _tokenA.safeApprove(address(router), amountAOut / 2);
+        _tokenB.safeApprove(address(router), amountBOut);
 
         (uint256 addedAmountA, uint256 addedAmountB, uint256 liquidity) = router
         .addLiquidity(
-            tokenA,
-            tokenB,
+            address(_tokenA),
+            address(_tokenB),
             amountAOut / 2,
             amountBOut,
             1,
@@ -310,37 +381,27 @@ contract ChocoMasterChef is Initializable, OwnableUpgradeable {
             block.timestamp + 1
         );
 
-        if (tokenA != router.WETH()) {
-            IERC20(tokenA).safeTransfer(
-                msg.sender,
-                IERC20(tokenA).balanceOf(address(this))
-            );
+        if (address(_tokenA) != router.WETH()) {
+            _tokenA.safeTransfer(msg.sender, _tokenA.balanceOf(address(this)));
         } else {
-            IWETH(router.WETH()).withdraw(
-                IERC20(tokenA).balanceOf(address(this))
-            );
+            IWETH(router.WETH()).withdraw(_tokenA.balanceOf(address(this)));
         }
 
-        if (tokenB != router.WETH()) {
-            IERC20(tokenB).safeTransfer(
-                msg.sender,
-                IERC20(tokenB).balanceOf(address(this))
-            );
+        if (address(_tokenB) != router.WETH()) {
+            _tokenB.safeTransfer(msg.sender, _tokenB.balanceOf(address(this)));
         } else {
-            IWETH(router.WETH()).withdraw(
-                IERC20(tokenB).balanceOf(address(this))
-            );
+            IWETH(router.WETH()).withdraw(_tokenB.balanceOf(address(this)));
         }
 
         emit IngredientsAdded(
             msg.sender,
-            tokenA,
-            tokenB,
+            address(_tokenA),
+            address(_tokenB),
             amountAOut / 2,
             amountBOut
         );
 
-        return liquidity;
+        return (addedAmountA, addedAmountB, liquidity);
     }
 
     /**
