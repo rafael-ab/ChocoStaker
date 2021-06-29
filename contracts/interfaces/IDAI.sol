@@ -3,7 +3,7 @@ pragma solidity ^0.7.6;
 
 interface IDAI {
     function name() external pure returns (string memory);
-    
+
     function transfer(address dst, uint256 wad) external returns (bool);
 
     function transferFrom(
